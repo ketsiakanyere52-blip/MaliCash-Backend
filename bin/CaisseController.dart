@@ -95,22 +95,26 @@ class CaisseController {
   }
 
   // GET CAISSE D'UNE ENTREPRISE
-  static Future getCaisse(Request request, String id) async {
+  static Future getCaisse(Request request, String idEntreprise) async {
     try {
-      final idEntreprise = int.parse(id);
+      final caisse = await CaisseService.getCaisse(int.parse(idEntreprise));
 
-      final caisse = await CaisseService.getCaisse(idEntreprise);
+      if (caisse == null) {
+        return Response.ok(
+          jsonEncode(null),
+          headers: {"Content-Type": "application/json"},
+        );
+      }
 
       return Response.ok(
-        jsonEncode(caisse ?? {}),
+        jsonEncode(CaisseService.convertirDate(caisse)),
         headers: {"Content-Type": "application/json"},
       );
-    } catch (e, stack) {
-      print("Erreur récupération caisse : $e");
-      print(stack);
+    } catch (e) {
+      print("Erreur caisse : $e");
 
       return Response.internalServerError(
-        body: jsonEncode({"success": false, "message": e.toString()}),
+        body: jsonEncode({"message": e.toString()}),
         headers: {"Content-Type": "application/json"},
       );
     }

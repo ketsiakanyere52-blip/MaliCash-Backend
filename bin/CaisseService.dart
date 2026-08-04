@@ -110,17 +110,34 @@ class CaisseService {
   // RECUPERER LA CAISSE D'UNE ENTREPRISE
   static Future<Map<String, dynamic>?> getCaisse(int idEntreprise) async {
     final conn = await Database.connect();
-    final results = await conn.query(
-      "SELECT * FROM caisse WHERE id_entreprise=? LIMIT 1",
-      [idEntreprise],
-    );
 
-    if (results.isEmpty) {
+    try {
+      final result = await conn.query(
+        """
+SELECT *
+FROM caisse
+WHERE id_entreprise = ?
+LIMIT 1
+""",
+        [idEntreprise],
+      );
+
+      if (result.isEmpty) {
+        return null;
+      }
+
+      final caisse = Map<String, dynamic>.from(result.first.fields);
+
+      caisse["date_creation"] = caisse["date_creation"]?.toString();
+
+      return caisse;
+    } catch (e) {
+      print("Erreur get caisse : $e");
       return null;
     }
+  }
 
-    final data = Map<String, dynamic>.from(results.first.fields);
-
+  static Map<String, dynamic> convertirDate(Map<String, dynamic> data) {
     data.forEach((key, value) {
       if (value is DateTime) {
         data[key] = value.toIso8601String();
