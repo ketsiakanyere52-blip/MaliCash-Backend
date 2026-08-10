@@ -35,7 +35,6 @@ class CaisseController {
       );
     }
   }
-
   // MODIFIER CAISSE
   static Future<Response> modifierCaisse(Request request) async {
     try {
@@ -67,7 +66,7 @@ class CaisseController {
     }
   }
 
-  // SUPPRIMER CAISSE
+
   static Future<Response> supprimerCaisse(Request request) async {
     try {
       final id = int.parse(["id"].toString());
@@ -94,7 +93,6 @@ class CaisseController {
     }
   }
 
-  // GET CAISSE D'UNE ENTREPRISE
   static Future getCaisse(Request request, String idEntreprise) async {
     try {
       final caisse = await CaisseService.getCaisse(int.parse(idEntreprise));

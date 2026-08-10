@@ -17,7 +17,7 @@ class UtilisateurController {
 
         data["nom"],
 
-        data["username"],
+        data["postnom"],
 
         data["password"],
 
@@ -56,7 +56,7 @@ class UtilisateurController {
 
         data["nom"],
 
-        data["username"],
+        data["postnom"],
 
         data["telephone"],
 
@@ -106,9 +106,9 @@ class UtilisateurController {
   }
 
   // GET UTILISATEURS
-  static Future<Response> getUtilisateur(Request request) async {
+  static Future getUtilisateur(Request request, String id) async {
     try {
-      final idEntreprise = int.parse(["id_entreprise"].toString());
+      final idEntreprise = int.parse(id);
 
       final utilisateurs = await UtilisateurService.getUtilisateur(
         idEntreprise,
@@ -116,15 +116,15 @@ class UtilisateurController {
 
       return Response.ok(
         jsonEncode(utilisateurs),
-
         headers: {"Content-Type": "application/json"},
       );
-    } catch (e) {
+    } catch (e, stack) {
+      print("ERREUR GET UTILISATEUR : $e");
+      print(stack);
+
       return Response(
         500,
-
         body: jsonEncode({"success": false, "message": e.toString()}),
-
         headers: {"Content-Type": "application/json"},
       );
     }
@@ -136,7 +136,7 @@ class UtilisateurController {
       final body = await request.readAsString();
       final data = jsonDecode(body);
       final utilisateur = await UtilisateurService.loginUtilisateur(
-        data["username"],
+        data["email"],
         data["password"],
       );
 

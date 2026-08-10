@@ -95,7 +95,7 @@ class Entreprise {
       // Récupérer l'id créé
       final idEntreprise = result.insertId;
 
-      // Récupérer l'entreprise créée
+      // Récupérer l'entreprise créé
       final entreprise = await conn.query(
         """
       SELECT

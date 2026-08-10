@@ -22,7 +22,6 @@ class CaisseService {
       'solde_initial': soldeInitial,
     };
   }
-
   // CREER CAISSE
   static Future createCaisse(
     int idEntreprise,
@@ -30,10 +29,7 @@ class CaisseService {
     double soldeInitial,
   ) async {
     final conn = await Database.connect();
-
     try {
-      // Vérifier si l'entreprise possède déjà une caisse
-
       final verif = await conn.query(
         """
         SELECT COUNT(*) AS total
@@ -64,8 +60,7 @@ class CaisseService {
       print("Erreur création caisse : $e");
     }
   }
-
-  // MODIFIER CAISSE
+  // MODIFIER une CAISSE
   static Future modifierCaisse(
     int idCaisse,
     String nom,
@@ -89,7 +84,6 @@ class CaisseService {
       print("Erreur modification caisse : $e");
     }
   }
-
   // SUPPRIMER CAISSE
   static Future supprimerCaisse(int idCaisse) async {
     final conn = await Database.connect();
@@ -106,7 +100,6 @@ class CaisseService {
       print("Erreur suppression caisse : $e");
     }
   }
-
   // RECUPERER LA CAISSE D'UNE ENTREPRISE
   static Future<Map<String, dynamic>?> getCaisse(int idEntreprise) async {
     final conn = await Database.connect();

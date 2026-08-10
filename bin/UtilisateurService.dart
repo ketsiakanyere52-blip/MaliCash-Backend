@@ -33,6 +33,17 @@ class UtilisateurService {
     };
   }
 
+  factory UtilisateurService.fromJson(Map<String, dynamic> json) {
+    return UtilisateurService(
+      idUtilisateur: json['id_utilisateur'] ?? 0,
+      idEntreprise: json['id_entreprise'] ?? 0,
+      nom: json['nom'] ?? '',
+      postnom: json['postnom'] ?? '',
+      password: json['password'] ?? '',
+      telephone: json['telephone'] ?? '',
+      email: json['email'] ?? '',
+    );
+  }
   // CREER UTILISATEUR
   static Future createUtilisateur(
     int idEntreprise,
@@ -137,7 +148,17 @@ class UtilisateurService {
         [idEntreprise],
       );
 
-      return results.map((e) => e.fields).toList();
+      return results.map((e) {
+        final data = e.fields;
+
+        data.forEach((key, value) {
+          if (value is DateTime) {
+            data[key] = value.toIso8601String();
+          }
+        });
+
+        return data;
+      }).toList();
     } catch (e) {
       print("Erreur chargement utilisateurs : $e");
       return [];
