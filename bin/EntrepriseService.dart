@@ -49,17 +49,17 @@ class Entreprise {
     required String password,
     required String devise,
   }) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
       // Vérifier si une entreprise existe déjà
-      final existe = await conn.query(
+      final existe = await conn.execute(
         """
   SELECT id_entreprise
   FROM entreprise
   WHERE email = ?
   """,
-        [email.trim().toLowerCase()],
+        {'email': email.trim().toLowerCase()},
       );
 
       if (existe.isNotEmpty) {
@@ -70,7 +70,7 @@ class Entreprise {
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
       // Insérer l'entreprise
-      final result = await conn.query(
+      final result = await conn.execute(
         """
       INSERT INTO entreprise(
         nom,
@@ -80,23 +80,23 @@ class Entreprise {
         password,
         devise
       )
-      VALUES(?,?,?,?,?,?)
+      VALUES(:nom, :adresse, :telephone, :email, :password, :devise)
       """,
-        [
-          nom,
-          adresse,
-          telephone,
-          email.trim().toLowerCase(),
-          hashedPassword,
-          devise,
-        ],
+        {
+          'nom': nom,
+          'adresse': adresse,
+          'telephone': telephone,
+          'email': email.trim().toLowerCase(),
+          'password': hashedPassword,
+          'devise': devise,
+        },
       );
 
       // Récupérer l'id créé
-      final idEntreprise = result.insertId;
+      final idEntreprise = result.lastInsertID.toInt();
 
       // Récupérer l'entreprise créé
-      final entreprise = await conn.query(
+      final entreprise = await conn.execute(
         """
       SELECT
         id_entreprise,
@@ -106,16 +106,16 @@ class Entreprise {
         email,
         devise
       FROM entreprise
-      WHERE id_entreprise = ?
+      WHERE id_entreprise = :id
       """,
-        [idEntreprise],
+        {'id': idEntreprise},
       );
 
       if (entreprise.isEmpty) {
         return null;
       }
 
-      return Map<String, dynamic>.from(entreprise.first.fields);
+      return Map<String, dynamic>.from(entreprise.rows.first.assoc());
     } catch (e) {
       print("Erreur création entreprise : $e");
 
@@ -125,9 +125,9 @@ class Entreprise {
 
   // RÉCUPÉRER L'ENTREPRISE
   static Future<Map<String, dynamic>?> getEntreprise() async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
-    final results = await conn.query("""
+    final results = await conn.execute("""
     SELECT
       id_entreprise,
       nom,
@@ -142,7 +142,7 @@ class Entreprise {
 
     if (results.isEmpty) return null;
 
-    final data = Map<String, dynamic>.from(results.first.fields);
+    final data = Map<String, dynamic>.from(results.rows.first.assoc());
 
     data["date_creation"] = (data["date_creation"] as DateTime)
         .toIso8601String();
@@ -159,28 +159,28 @@ class Entreprise {
     String email,
     String devise,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query(
+      await conn.execute(
         """
         UPDATE entreprise
         SET
-          nom = ?,
-          adresse = ?,
-          telephone = ?,
-          email = ?,
-          devise = ?
-        WHERE id_entreprise = ?
+          nom = :nom,
+          adresse = :adresse,
+          telephone = :telephone,
+          email = :email,
+          devise = :devise
+        WHERE id_entreprise = :id
         """,
-        [
-          nom,
-          adresse,
-          telephone,
-          email.trim().toLowerCase(),
-          devise,
-          idEntreprise,
-        ],
+        {
+          'nom': nom,
+          'adresse': adresse,
+          'telephone': telephone,
+          'email': email.trim().toLowerCase(),
+          'devise': devise,
+          'id': idEntreprise,
+        },
       );
     } catch (e) {
       print("Erreur modification entreprise : $e");
@@ -191,19 +191,20 @@ class Entreprise {
     String email,
     String password,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final results = await conn.query(
-        "SELECT * FROM entreprise WHERE email = ?",
-        [email.trim().toLowerCase()],
+      final results = await conn.execute(
+        "SELECT * FROM entreprise WHERE email = :email",
+        {'email': email.trim().toLowerCase()},
       );
 
-      print("Nombre entreprise trouvée : ${results.length}");
+      print(results.rows.map((e) => e.assoc()).toList());
+      print("Nombre entreprise trouvée : ${results.rows.length}");
 
       if (results.isEmpty) return null;
 
-      final entreprise = results.first.fields;
+      final entreprise = results.rows.first.assoc();
 
       print("Entreprise trouvée : $entreprise");
 

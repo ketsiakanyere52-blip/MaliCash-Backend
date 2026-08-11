@@ -1,5 +1,4 @@
 import 'Database.dart';
-import 'package:mysql1/mysql1.dart';
 
 class MouvementCaisseService {
   int idMouvement;
@@ -33,20 +32,20 @@ class MouvementCaisseService {
   static Future<List<Map<String, dynamic>>> getMouvementCaisse(
     int idCaisse,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
         SELECT *
         FROM mouvement_caisse
-        WHERE id_caisse = ?
+        WHERE id_caisse = :idCaisse
         ORDER BY date_mouvement DESC
         """,
-        [idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.map((e) => e.fields).toList();
+      return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur chargement mouvements : $e");
       return [];
@@ -57,10 +56,10 @@ class MouvementCaisseService {
   static Future<List<Map<String, dynamic>>> historiqueCaisse(
     int idCaisse,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
         SELECT
             id_mouvement,
@@ -69,13 +68,13 @@ class MouvementCaisseService {
             montant,
             date_mouvement
         FROM mouvement_caisse
-        WHERE id_caisse = ?
+        WHERE id_caisse = :idCaisse
         ORDER BY date_mouvement DESC
         """,
-        [idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.map((e) => e.fields).toList();
+      return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur historique : $e");
       return [];
@@ -88,10 +87,10 @@ class MouvementCaisseService {
     String dateDebut,
     String dateFin,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
       SELECT
           id_mouvement,
@@ -100,14 +99,14 @@ class MouvementCaisseService {
           montant,
           date_mouvement
       FROM mouvement_caisse
-      WHERE id_caisse = ?
-        AND DATE(date_mouvement) BETWEEN ? AND ?
+      WHERE id_caisse = :idCaisse
+        AND DATE(date_mouvement) BETWEEN :dateDebut AND :dateFin
       ORDER BY date_mouvement DESC
       """,
-        [idCaisse, dateDebut, dateFin],
+        {'idCaisse': idCaisse, 'dateDebut': dateDebut, 'dateFin': dateFin},
       );
 
-      return result.map((e) => e.fields).toList();
+      return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur historique période : $e");
       return [];
@@ -120,10 +119,10 @@ class MouvementCaisseService {
     String dateDebut,
     String dateFin,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
       SELECT
           DATE(date_mouvement) AS jour,
@@ -144,17 +143,17 @@ class MouvementCaisseService {
 
       FROM mouvement_caisse
 
-      WHERE id_caisse=?
-      AND DATE(date_mouvement) BETWEEN ? AND ?
+      WHERE id_caisse= :idCaisse
+      AND DATE(date_mouvement) BETWEEN :dateDebut AND :dateFin
 
       GROUP BY DATE(date_mouvement)
 
       ORDER BY DATE(date_mouvement)
       """,
-        [idCaisse, dateDebut, dateFin],
+        {'idCaisse': idCaisse, 'dateDebut': dateDebut, 'dateFin': dateFin},
       );
 
-      return result.map((e) => e.fields).toList();
+      return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur graphique période : $e");
       return [];
@@ -163,10 +162,10 @@ class MouvementCaisseService {
 
   // SOLDE ACTUEL
   static Future<double> soldeCaisse(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
         SELECT
             c.solde_initial
@@ -174,25 +173,25 @@ class MouvementCaisseService {
             (
                 SELECT IFNULL(SUM(montant),0)
                 FROM entree
-                WHERE id_caisse = ?
+                WHERE id_caisse = :idCaisse
             )
             -
             (
                 SELECT IFNULL(SUM(montant),0)
                 FROM sortie
-                WHERE id_caisse = ?
+                WHERE id_caisse = :idCaisse
             )
             AS solde
         FROM caisse c
-        WHERE c.id_caisse = ?
+        WHERE c.id_caisse = :idCaisse
         LIMIT 1
         """,
-        [idCaisse, idCaisse, idCaisse],
+        {'idCaisse': idCaisse},
       );
 
       if (result.isEmpty) return 0;
 
-      return (result.first["solde"] as num).toDouble();
+      return (result.rows.first.assoc()["solde"] as num).toDouble();
     } catch (e) {
       print("Erreur solde : $e");
       return 0;
@@ -201,37 +200,37 @@ class MouvementCaisseService {
 
   // RAPPORT JOURNALIER
   static Future<Map<String, dynamic>> rapportJournalier(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
       SELECT
 
       (SELECT IFNULL(SUM(montant),0)
       FROM entree
-      WHERE id_caisse = ?
+      WHERE id_caisse = :idCaisse
       AND DATE(date_entree)=CURDATE()) AS total_entree,
 
       (SELECT IFNULL(SUM(montant),0)
       FROM sortie
-      WHERE id_caisse = ?
+      WHERE id_caisse = :idCaisse
       AND DATE(date_sortie)=CURDATE()) AS total_sortie,
 
       (SELECT COUNT(*)
       FROM entree
-      WHERE id_caisse = ?
+      WHERE id_caisse = :idCaisse
       AND DATE(date_entree)=CURDATE()) AS nombre_entree,
 
       (SELECT COUNT(*)
       FROM sortie
-      WHERE id_caisse = ?
+      WHERE id_caisse = :idCaisse
       AND DATE(date_sortie)=CURDATE()) AS nombre_sortie
       """,
-        [idCaisse, idCaisse, idCaisse, idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.first.fields;
+      return result.rows.first.assoc();
     } catch (e) {
       print("Erreur rapport journalier : $e");
 
@@ -241,41 +240,41 @@ class MouvementCaisseService {
 
   // RAPPORT MENSUEL
   static Future<Map<String, dynamic>> rapportMensuel(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
       SELECT
 
       (SELECT IFNULL(SUM(montant),0)
       FROM entree
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND MONTH(date_entree)=MONTH(CURDATE())
       AND YEAR(date_entree)=YEAR(CURDATE())) AS total_entree,
 
       (SELECT IFNULL(SUM(montant),0)
       FROM sortie
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND MONTH(date_sortie)=MONTH(CURDATE())
       AND YEAR(date_sortie)=YEAR(CURDATE())) AS total_sortie,
 
       (SELECT COUNT(*)
       FROM entree
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND MONTH(date_entree)=MONTH(CURDATE())
       AND YEAR(date_entree)=YEAR(CURDATE())) AS nombre_entree,
 
       (SELECT COUNT(*)
       FROM sortie
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND MONTH(date_sortie)=MONTH(CURDATE())
       AND YEAR(date_sortie)=YEAR(CURDATE())) AS nombre_sortie
       """,
-        [idCaisse, idCaisse, idCaisse, idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.first.fields;
+      return result.rows.first.assoc();
     } catch (e) {
       print("Erreur rapport mensuel : $e");
 
@@ -285,37 +284,37 @@ class MouvementCaisseService {
 
   // RAPPORT ANNUEL
   static Future<Map<String, dynamic>> rapportAnnuel(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
       SELECT
 
       (SELECT IFNULL(SUM(montant),0)
       FROM entree
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND YEAR(date_entree)=YEAR(CURDATE())) AS total_entree,
 
       (SELECT IFNULL(SUM(montant),0)
       FROM sortie
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND YEAR(date_sortie)=YEAR(CURDATE())) AS total_sortie,
 
       (SELECT COUNT(*)
       FROM entree
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND YEAR(date_entree)=YEAR(CURDATE())) AS nombre_entree,
 
       (SELECT COUNT(*)
       FROM sortie
-      WHERE id_caisse=?
+      WHERE id_caisse= :idCaisse
       AND YEAR(date_sortie)=YEAR(CURDATE())) AS nombre_sortie
       """,
-        [idCaisse, idCaisse, idCaisse, idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.first.fields;
+      return result.rows.first.assoc();
     } catch (e) {
       print("Erreur rapport annuel : $e");
 
@@ -328,7 +327,7 @@ class MouvementCaisseService {
     String? dateDebut,
     String? dateFin,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     String sql = """
     SELECT 
@@ -347,19 +346,20 @@ class MouvementCaisseService {
 
     FROM mouvement_caisse
 
-    WHERE id_caisse = ?
+    WHERE id_caisse = :idCaisse
   """;
 
-    List<dynamic> params = [idCaisse];
+    Map<String, dynamic> params = {};
+    params['idCaisse'] = idCaisse;
 
     if (dateDebut != null && dateFin != null) {
       sql += """
       AND DATE(date_mouvement) 
-      BETWEEN ? AND ?
+      BETWEEN :dateDebut AND :dateFin
     """;
 
-      params.add(dateDebut);
-      params.add(dateFin);
+      params['dateDebut'] = dateDebut;
+      params['dateFin'] = dateFin;
     }
 
     sql += """
@@ -367,9 +367,11 @@ class MouvementCaisseService {
     ORDER BY DATE(date_mouvement)
   """;
 
-    final result = await conn.query(sql, params);
+    final result = await conn.execute(sql, params);
 
-    return result.map((row) {
+    return result.rows.map((e) {
+      var row = e.assoc();
+
       return {
         "date": row['date'].toString(),
         "entree": double.parse(row['entree'].toString()),

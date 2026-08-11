@@ -1,5 +1,4 @@
 import 'Database.dart';
-import 'package:mysql1/mysql1.dart';
 
 class SortieService {
   int idSortie;
@@ -32,25 +31,25 @@ class SortieService {
     String libelle,
     double montant,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.transaction((txn) async {
+      await conn.transactional((txn) async {
         // Enregistrer la sortie
-        await txn.query(
+        await txn.execute(
           """
           INSERT INTO sortie(
             id_caisse,
             libelle,
             montant
           )
-          VALUES(?,?,?)
+          VALUES(:idCaisse, :libelle, :montant)
           """,
-          [idCaisse, libelle, montant],
+          {'idCaisse': idCaisse, 'libelle': libelle, 'montant': montant},
         );
 
         // Enregistrer le mouvement de caisse
-        await txn.query(
+        await txn.execute(
           """
           INSERT INTO mouvement_caisse(
             id_caisse,
@@ -58,9 +57,14 @@ class SortieService {
             libelle,
             montant
           )
-          VALUES(?,?,?,?)
+          VALUES(:idCaisse, :typeMouvement, :libelle, :montant)
           """,
-          [idCaisse, "SORTIE", libelle, montant],
+          {
+            'idCaisse': idCaisse,
+            'typeMouvement': "SORTIE",
+            'libelle': libelle,
+            'montant': montant,
+          },
         );
       });
     } catch (e) {
@@ -74,18 +78,18 @@ class SortieService {
     String libelle,
     double montant,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query(
+      await conn.execute(
         """
         UPDATE sortie
         SET
-          libelle = ?,
-          montant = ?
-        WHERE id_sortie = ?
+          libelle = :libelle,
+          montant = :montant
+        WHERE id_sortie = :idSortie
         """,
-        [libelle, montant, idSortie],
+        {'libelle': libelle, 'montant': montant, 'idSortie': idSortie},
       );
     } catch (e) {
       print("Erreur modification sortie : $e");
@@ -94,20 +98,20 @@ class SortieService {
 
   // RECUPERER LES SORTIES
   static Future<List<Map<String, dynamic>>> getSortie(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
         SELECT *
         FROM sortie
-        WHERE id_caisse = ?
+        WHERE id_caisse = :idCaisse
         ORDER BY date_sortie DESC
         """,
-        [idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.map((e) => e.fields).toList();
+      return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur récupération sortie : $e");
       return [];

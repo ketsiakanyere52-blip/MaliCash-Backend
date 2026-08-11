@@ -2,10 +2,10 @@ import 'Database.dart';
 
 class DashboardService {
   static Future<Map<String, dynamic>> getDashboard(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
         SELECT
 
@@ -39,18 +39,18 @@ class DashboardService {
 
         FROM caisse c
 
-        WHERE c.id_caisse = ?
+        WHERE c.id_caisse = :idCaisse
 
         LIMIT 1
         """,
-        [idCaisse],
+        {'idCaisse': idCaisse},
       );
 
       if (result.isEmpty) {
         return {};
       }
 
-      final data = result.first.fields;
+      final data = result.rows.first.assoc();
 
       final solde =
           (data["solde_initial"] as num).toDouble() +

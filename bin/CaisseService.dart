@@ -1,5 +1,4 @@
 import 'Database.dart';
-import 'package:mysql1/mysql1.dart';
 
 class CaisseService {
   int idCaisse;
@@ -22,104 +21,112 @@ class CaisseService {
       'solde_initial': soldeInitial,
     };
   }
+
   // CREER CAISSE
   static Future createCaisse(
     int idEntreprise,
     String nom,
     double soldeInitial,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
     try {
-      final verif = await conn.query(
+      final verif = await conn.execute(
         """
         SELECT COUNT(*) AS total
         FROM caisse
-        WHERE id_entreprise = ?
+        WHERE id_entreprise = :id
         """,
-        [idEntreprise],
+        {'id': idEntreprise},
       );
 
-      final total = verif.first["total"] as int;
+      final total = verif.rows.first.assoc()["total"] as int;
 
       if (total > 0) {
         throw Exception("Cette entreprise possède déjà une caisse.");
       }
 
-      await conn.query(
+      await conn.execute(
         """
         INSERT INTO caisse(
           id_entreprise,
           nom,
           solde_initial
         )
-        VALUES(?,?,?)
+        VALUES(:idEntreprise, :nom, :soldeInitial)
         """,
-        [idEntreprise, nom, soldeInitial],
+        {
+          'idEntreprise': idEntreprise,
+          'nom': nom,
+          'soldeInitial': soldeInitial,
+        },
       );
     } catch (e) {
       print("Erreur création caisse : $e");
     }
   }
+
   // MODIFIER une CAISSE
   static Future modifierCaisse(
     int idCaisse,
     String nom,
     double soldeInitial,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query(
+      await conn.execute(
         """
         UPDATE caisse
         SET
-          nom = ?,
-          solde_initial = ?
+          nom = :nom,
+          solde_initial = :soldeInitial
 
-        WHERE id_caisse = ?
+        WHERE id_caisse = :idCaisse
         """,
-        [nom, soldeInitial, idCaisse],
+        {'nom': nom, 'soldeInitial': soldeInitial, 'idCaisse': idCaisse},
       );
     } catch (e) {
       print("Erreur modification caisse : $e");
     }
   }
+
   // SUPPRIMER CAISSE
   static Future supprimerCaisse(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query(
+      await conn.execute(
         """
         DELETE FROM caisse
-        WHERE id_caisse = ?
+        WHERE id_caisse = :idCaisse
         """,
-        [idCaisse],
+        {'idCaisse': idCaisse},
       );
     } catch (e) {
       print("Erreur suppression caisse : $e");
     }
   }
+
   // RECUPERER LA CAISSE D'UNE ENTREPRISE
   static Future<Map<String, dynamic>?> getCaisse(int idEntreprise) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
 SELECT *
 FROM caisse
-WHERE id_entreprise = ?
+WHERE id_entreprise = :idEntreprise
 LIMIT 1
 """,
-        [idEntreprise],
+        {'idEntreprise': idEntreprise},
       );
 
       if (result.isEmpty) {
         return null;
       }
 
-      final caisse = Map<String, dynamic>.from(result.first.fields);
+      final caisse = Map<String, dynamic>.from(result.rows.first.assoc());
 
       caisse["date_creation"] = caisse["date_creation"]?.toString();
 

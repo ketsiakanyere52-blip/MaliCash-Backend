@@ -1,6 +1,5 @@
 import 'Database.dart';
 import 'package:bcrypt/bcrypt.dart';
-import 'package:mysql1/mysql1.dart';
 
 class UtilisateurService {
   int idUtilisateur;
@@ -53,12 +52,12 @@ class UtilisateurService {
     String telephone,
     String email,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
-      await conn.query(
+      await conn.execute(
         """
         INSERT INTO utilisateurs(
           id_entreprise,
@@ -68,16 +67,16 @@ class UtilisateurService {
           telephone,
           email
         )
-        VALUES(?,?,?,?,?,?)
+        VALUES(:idEntreprise, :nom, :postnom, :password, :telephone, :email)
         """,
-        [
-          idEntreprise,
-          nom,
-          postnom.trim().toLowerCase(),
-          hashedPassword,
-          telephone,
-          email.trim().toLowerCase(),
-        ],
+        {
+          'idEntreprise': idEntreprise,
+          'nom': nom,
+          'postnom': postnom.trim().toLowerCase(),
+          'password': hashedPassword,
+          'telephone': telephone,
+          'email': email.trim().toLowerCase(),
+        },
       );
     } catch (e) {
       print("Erreur création utilisateur : $e");
@@ -92,26 +91,26 @@ class UtilisateurService {
     String telephone,
     String email,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query(
+      await conn.execute(
         """
         UPDATE utilisateurs
         SET
-          nom = ?,
-          postnom = ?,
-          telephone = ?,
-          email = ?
-        WHERE id_utilisateur = ?
+          nom = :nom,
+          postnom = :postnom,
+          telephone = :telephone,
+          email = :email
+        WHERE id_utilisateur = :id
         """,
-        [
-          nom,
-          postnom.trim().toLowerCase(),
-          telephone,
-          email.trim().toLowerCase(),
-          idUtilisateur,
-        ],
+        {
+          'nom': nom,
+          'postnom': postnom.trim().toLowerCase(),
+          'telephone': telephone,
+          'email': email.trim().toLowerCase(),
+          'id': idUtilisateur,
+        },
       );
     } catch (e) {
       print("Erreur modification utilisateur : $e");
@@ -120,12 +119,13 @@ class UtilisateurService {
 
   // SUPPRIMER UTILISATEUR
   static Future supprimerUtilisateur(int idUtilisateur) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query("DELETE FROM utilisateurs WHERE id_utilisateur = ?", [
-        idUtilisateur,
-      ]);
+      await conn.execute(
+        "DELETE FROM utilisateurs WHERE id_utilisateur = :id",
+        {'id': idUtilisateur},
+      );
     } catch (e) {
       print("Erreur suppression utilisateur : $e");
     }
@@ -135,29 +135,21 @@ class UtilisateurService {
   static Future<List<Map<String, dynamic>>> getUtilisateur(
     int idEntreprise,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final results = await conn.query(
+      final results = await conn.execute(
         """
         SELECT *
         FROM utilisateurs
-        WHERE id_entreprise = ?
+        WHERE id_entreprise = :idEntreprise
         ORDER BY nom ASC
         """,
-        [idEntreprise],
+        {'idEntreprise': idEntreprise},
       );
 
-      return results.map((e) {
-        final data = e.fields;
-
-        data.forEach((key, value) {
-          if (value is DateTime) {
-            data[key] = value.toIso8601String();
-          }
-        });
-
-        return data;
+      return results.rows.map((e) {
+        return e.assoc();
       }).toList();
     } catch (e) {
       print("Erreur chargement utilisateurs : $e");
@@ -170,21 +162,21 @@ class UtilisateurService {
     String postnom,
     String password,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final results = await conn.query(
+      final results = await conn.execute(
         """
         SELECT *
         FROM utilisateurs
-        WHERE email = ?
+        WHERE email = :email
         """,
-        [postnom.trim().toLowerCase()],
+        {'email': postnom.trim().toLowerCase()},
       );
 
       if (results.isEmpty) return null;
 
-      final utilisateur = results.first.fields;
+      final utilisateur = results.rows.first.assoc();
 
       final storedPassword = utilisateur["password"];
 

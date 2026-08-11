@@ -6,23 +6,18 @@ import 'Routes.dart';
 import 'Database.dart';
 
 void main() async {
-  
   try {
-    final conn = await Database.connect();
-
+    await Database().init();
     print("MySQL connecté");
   } catch (e) {
     print("Erreur MySQL : $e");
   }
 
-
   final Auth = Routes();
-
-
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
-      .addHandler(Auth.router);
+      .addHandler(Auth.router.call);
   // SERVER
   final server = await io.serve(handler, InternetAddress.anyIPv4, 8880);
 

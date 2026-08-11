@@ -1,5 +1,4 @@
 import 'Database.dart';
-import 'package:mysql1/mysql1.dart';
 
 class EntreeService {
   int idEntree;
@@ -32,25 +31,25 @@ class EntreeService {
     String libelle,
     double montant,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.transaction((txn) async {
+      await conn.transactional((txn) async {
         // Enregistrer l'entrée
-        await txn.query(
+        await txn.execute(
           """
           INSERT INTO entree(
             id_caisse,
             libelle,
             montant
           )
-          VALUES(?,?,?)
+          VALUES(:idCaisse, :libelle, :montant)
           """,
-          [idCaisse, libelle, montant],
+          {'idCaisse': idCaisse, 'libelle': libelle, 'montant': montant},
         );
 
         // Enregistrer le mouvement de caisse
-        await txn.query(
+        await txn.execute(
           """
           INSERT INTO mouvement_caisse(
             id_caisse,
@@ -58,9 +57,14 @@ class EntreeService {
             libelle,
             montant
           )
-          VALUES(?,?,?,?)
+          VALUES(:idCaisse, :typeMouvement, :libelle, :montant)
           """,
-          [idCaisse, "ENTREE", libelle, montant],
+          {
+            'idCaisse': idCaisse,
+            'typeMouvement': "ENTREE",
+            'libelle': libelle,
+            'montant': montant,
+          },
         );
       });
     } catch (e) {
@@ -74,18 +78,18 @@ class EntreeService {
     String libelle,
     double montant,
   ) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      await conn.query(
+      await conn.execute(
         """
         UPDATE entree
         SET
-          libelle = ?,
-          montant = ?
-        WHERE id_entree = ?
+          libelle = :libelle,
+          montant = :montant
+        WHERE id_entree = :idEntree
         """,
-        [libelle, montant, idEntree],
+        {'libelle': libelle, 'montant': montant, 'idEntree': idEntree},
       );
     } catch (e) {
       print("Erreur modification entrée : $e");
@@ -94,20 +98,20 @@ class EntreeService {
 
   // RECUPERER LES ENTREES
   static Future<List<Map<String, dynamic>>> getEntree(int idCaisse) async {
-    final conn = await Database.connect();
+    final conn = Database().pool;
 
     try {
-      final result = await conn.query(
+      final result = await conn.execute(
         """
         SELECT *
         FROM entree
-        WHERE id_caisse = ?
+        WHERE id_caisse = :idCaisse
         ORDER BY date_entree DESC
         """,
-        [idCaisse],
+        {'idCaisse': idCaisse},
       );
 
-      return result.map((e) => e.fields).toList();
+      return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur récupération entrée : $e");
       return [];
