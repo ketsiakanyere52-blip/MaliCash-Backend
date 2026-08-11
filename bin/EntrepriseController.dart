@@ -113,13 +113,15 @@ class EntrepriseController {
 
   static Future<Response> loginEntreprise(Request request) async {
     try {
-      // 1. Afficher tous les en-têtes reçus pour vérifier Content-Type et Content-Length
       print('--- HEADERS REÇUS ---');
       request.headers.forEach((key, value) {
         print('$key: $value');
       });
 
-      final body = await request.readAsString();
+      // 1. Lire le corps sous forme de liste de bytes (plus robuste dans Shelf)
+      final bodyBytes = await request.read().expand((i) => i).toList();
+      final body = utf8.decode(bodyBytes);
+
       print('--- BODY REÇU ---: "$body"');
 
       if (body.isEmpty) {
