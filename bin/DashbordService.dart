@@ -53,9 +53,9 @@ class DashboardService {
       final data = result.rows.first.assoc();
 
       final solde =
-          (data["solde_initial"] as num).toDouble() +
-          (data["total_entree"] as num).toDouble() -
-          (data["total_sortie"] as num).toDouble();
+          (double.tryParse(data["solde_initial"].toString()) ?? 0) +
+          (double.tryParse(data["total_entree"].toString()) ?? 0) -
+          (double.tryParse(data["total_sortie"].toString()) ?? 0);
 
       data["solde_actuel"] = solde;
 

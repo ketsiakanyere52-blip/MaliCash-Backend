@@ -191,7 +191,7 @@ class MouvementCaisseService {
 
       if (result.isEmpty) return 0;
 
-      return (result.rows.first.assoc()["solde"] as num).toDouble();
+      return double.tryParse(result.rows.first.assoc()["solde"]) ?? 0;
     } catch (e) {
       print("Erreur solde : $e");
       return 0;
