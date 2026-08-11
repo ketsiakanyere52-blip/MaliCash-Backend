@@ -118,19 +118,19 @@ class EntrepriseController {
         print('$key: $value');
       });
 
-      // 1. Lire le corps sous forme de liste de bytes (plus robuste dans Shelf)
-      final bodyBytes = await request.read().expand((i) => i).toList();
-      final body = utf8.decode(bodyBytes);
+      // Lecture directe du Stream de bytes de la requête
+      final List<int> bodyBytes = await request
+          .read()
+          .expand((chunk) => chunk)
+          .toList();
+      final String body = utf8.decode(bodyBytes);
 
       print('--- BODY REÇU ---: "$body"');
 
       if (body.isEmpty) {
         return Response(
           400,
-          body: jsonEncode({
-            "success": false,
-            "message": "Le corps de la requête est vide",
-          }),
+          body: jsonEncode({"success": false, "message": "Le corps est vide"}),
           headers: {"Content-Type": "application/json"},
         );
       }
