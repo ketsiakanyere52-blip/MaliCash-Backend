@@ -114,6 +114,7 @@ class EntrepriseController {
   static Future<Response> loginEntreprise(Request request) async {
     try {
       final body = await request.readAsString();
+      print('ERROR : $body');
       final data = jsonDecode(body);
       final result = await Entreprise.loginEntreprise(
         data["email"],
