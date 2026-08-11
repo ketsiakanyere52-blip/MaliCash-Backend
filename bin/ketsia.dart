@@ -4,6 +4,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'Routes.dart';
 import 'Database.dart';
+import 'middware/corps_middware.dart';
 
 void main() async {
   try {
@@ -13,11 +14,12 @@ void main() async {
     print("Erreur MySQL : $e");
   }
 
-  final Auth = Routes();
+  final routes = Routes();
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
-      .addHandler(Auth.router.call);
+      .addMiddleware(corsMiddleware())
+      .addHandler(routes.router.call);
   // SERVER
   final server = await io.serve(handler, InternetAddress.anyIPv4, 8880);
 

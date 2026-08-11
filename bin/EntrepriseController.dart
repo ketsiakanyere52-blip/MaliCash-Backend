@@ -139,6 +139,7 @@ class EntrepriseController {
         headers: {"Content-Type": "application/json"},
       );
     } catch (e) {
+      print('ERROR : $e');
       return Response(
         500,
 
