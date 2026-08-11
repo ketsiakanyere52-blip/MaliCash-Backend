@@ -113,28 +113,7 @@ class EntrepriseController {
 
   static Future<Response> loginEntreprise(Request request) async {
     try {
-      print('--- HEADERS REÇUS ---');
-      request.headers.forEach((key, value) {
-        print('$key: $value');
-      });
-
-      // Lecture directe du Stream de bytes de la requête
-      final List<int> bodyBytes = await request
-          .read()
-          .expand((chunk) => chunk)
-          .toList();
-      final String body = utf8.decode(bodyBytes);
-
-      print('--- BODY REÇU ---: "$body"');
-
-      if (body.isEmpty) {
-        return Response(
-          400,
-          body: jsonEncode({"success": false, "message": "Le corps est vide"}),
-          headers: {"Content-Type": "application/json"},
-        );
-      }
-
+      final body = await request.readAsString();
       final data = jsonDecode(body);
       final result = await Entreprise.loginEntreprise(
         data["email"],
@@ -144,23 +123,27 @@ class EntrepriseController {
       if (result == null) {
         return Response(
           401,
+
           body: jsonEncode({
             "success": false,
             "message": "Identifiants incorrects",
           }),
+
           headers: {"Content-Type": "application/json"},
         );
       }
 
       return Response.ok(
         jsonEncode({"success": true, "data": result}),
+
         headers: {"Content-Type": "application/json"},
       );
     } catch (e) {
-      print('ERROR : $e');
       return Response(
         500,
+
         body: jsonEncode({"success": false, "message": e.toString()}),
+
         headers: {"Content-Type": "application/json"},
       );
     }
