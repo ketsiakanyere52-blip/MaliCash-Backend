@@ -30,6 +30,7 @@ class EntreeService {
     int idCaisse,
     String libelle,
     double montant,
+    int idUtilisateur,
   ) async {
     final conn = Database().pool;
 
@@ -41,11 +42,17 @@ class EntreeService {
           INSERT INTO entree(
             id_caisse,
             libelle,
-            montant
+            montant,
+            id_utilisateur
           )
-          VALUES(:idCaisse, :libelle, :montant)
+          VALUES(:idCaisse, :libelle, :montant, :id_utilisateur)
           """,
-          {'idCaisse': idCaisse, 'libelle': libelle, 'montant': montant},
+          {
+            'idCaisse': idCaisse,
+            'libelle': libelle,
+            'montant': montant,
+            'id_utilisateur': idUtilisateur,
+          },
         );
 
         // Enregistrer le mouvement de caisse

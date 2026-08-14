@@ -9,6 +9,7 @@ class UtilisateurService {
   String password;
   String telephone;
   String email;
+  bool estAdmin;
 
   UtilisateurService({
     required this.idUtilisateur,
@@ -18,6 +19,7 @@ class UtilisateurService {
     required this.password,
     required this.telephone,
     required this.email,
+    required this.estAdmin,
   });
 
   Map<String, dynamic> toJson() {
@@ -29,6 +31,7 @@ class UtilisateurService {
       'password': password,
       'telephone': telephone,
       'email': email,
+      'est_admin': estAdmin,
     };
   }
 
@@ -41,6 +44,7 @@ class UtilisateurService {
       password: json['password'] ?? '',
       telephone: json['telephone'] ?? '',
       email: json['email'] ?? '',
+      estAdmin: json['est_admin'],
     );
   }
   // CREER UTILISATEUR
@@ -51,6 +55,7 @@ class UtilisateurService {
     String password,
     String telephone,
     String email,
+    bool estAdmin,
   ) async {
     final conn = Database().pool;
 
@@ -65,9 +70,10 @@ class UtilisateurService {
           postnom,
           password,
           telephone,
-          email
+          email,
+          est_admin
         )
-        VALUES(:idEntreprise, :nom, :postnom, :password, :telephone, :email)
+        VALUES(:idEntreprise, :nom, :postnom, :password, :telephone, :email, :est_admin)
         """,
         {
           'idEntreprise': idEntreprise,
@@ -76,6 +82,7 @@ class UtilisateurService {
           'password': hashedPassword,
           'telephone': telephone,
           'email': email.trim().toLowerCase(),
+          'est_admin': estAdmin,
         },
       );
     } catch (e) {
@@ -90,6 +97,7 @@ class UtilisateurService {
     String postnom,
     String telephone,
     String email,
+    bool estAdmin,
   ) async {
     final conn = Database().pool;
 
@@ -101,7 +109,9 @@ class UtilisateurService {
           nom = :nom,
           postnom = :postnom,
           telephone = :telephone,
-          email = :email
+          est_admin = :est_admin,
+          email = :email,
+          est_admin = : est_admin
         WHERE id_utilisateur = :id
         """,
         {
@@ -109,6 +119,7 @@ class UtilisateurService {
           'postnom': postnom.trim().toLowerCase(),
           'telephone': telephone,
           'email': email.trim().toLowerCase(),
+          'est_admin': estAdmin,
           'id': idUtilisateur,
         },
       );
@@ -159,7 +170,7 @@ class UtilisateurService {
 
   // LOGIN
   static Future<Map<String, dynamic>?> loginUtilisateur(
-    String postnom,
+    String email,
     String password,
   ) async {
     final conn = Database().pool;
@@ -171,13 +182,15 @@ class UtilisateurService {
         FROM utilisateurs
         WHERE email = :email
         """,
-        {'email': postnom.trim().toLowerCase()},
+        {'email': email.trim().toLowerCase()},
       );
 
-      if (results.isEmpty) return null;
+      if (results.rows.isEmpty) {
+        print("Aucun utiliateur trouvee");
 
+        return null;
+      }
       final utilisateur = results.rows.first.assoc();
-
       final storedPassword = utilisateur["password"];
 
       if (storedPassword == null) return null;
@@ -187,8 +200,10 @@ class UtilisateurService {
       if (!isValid) return null;
 
       return utilisateur;
-    } catch (e) {
+    } catch (e, stack) {
+      print("Erreur login");
       print("Erreur login utilisateur : $e");
+      print(stack);
       return null;
     }
   }

@@ -1,7 +1,8 @@
 import 'dart:convert';
-
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+import 'package:dotenv/dotenv.dart';
 import 'package:shelf/shelf.dart';
-
+import 'Database.dart';
 import 'UtilisateurService.dart';
 
 class UtilisateurController {
@@ -24,6 +25,7 @@ class UtilisateurController {
         data["telephone"],
 
         data["email"],
+        data["est_admin"],
       );
 
       return Response.ok(
@@ -61,6 +63,7 @@ class UtilisateurController {
         data["telephone"],
 
         data["email"],
+        data["est_admin"],
       );
 
       return Response.ok(
@@ -106,7 +109,7 @@ class UtilisateurController {
   }
 
   // GET UTILISATEURS
-  static Future getUtilisateur(Request request, String id) async {
+  static Future<Response> getUtilisateur(Request request, String id) async {
     try {
       final idEntreprise = int.parse(id);
 
@@ -114,8 +117,20 @@ class UtilisateurController {
         idEntreprise,
       );
 
+      // Convertir DateTime en String pour chaque utilisateur
+      final data = utilisateurs.map((utilisateur) {
+        final utilisateurMap = Map<String, dynamic>.from(utilisateur);
+
+        if (utilisateurMap["date_creation"] is DateTime) {
+          utilisateurMap["date_creation"] =
+              (utilisateurMap["date_creation"] as DateTime).toIso8601String();
+        }
+
+        return utilisateurMap;
+      }).toList();
+
       return Response.ok(
-        jsonEncode(utilisateurs),
+        jsonEncode(data),
         headers: {"Content-Type": "application/json"},
       );
     } catch (e, stack) {
@@ -153,17 +168,49 @@ class UtilisateurController {
         );
       }
 
+      final dat = Map<String, dynamic>.from(utilisateur);
+      dat.remove('password');
+      if (dat['date_creation'] != null && dat['date_creation'] is DateTime) {
+        dat['date_creation'] = (dat['date_creation'] as DateTime)
+            .toIso8601String();
+      }
+      print("Utilisateur : $utilisateur");
+      print("ID utilisateur : ${utilisateur['id_utilisateur']}");
+      print("ID entreprise : ${utilisateur['id_entreprise']}");
+      print("Est admin : ${utilisateur['est_Admin']}");
+      print("JWT SECRET : ${env['JWT_SECRET']}");
+      // creation de jwt
+      final jwt = JWT({
+        'id_utilisateur': utilisateur['id_utilisateur'],
+        'id_entreprise': utilisateur['id_entreprise'],
+        'est_admin': utilisateur['est_admin'],
+      });
+      print(" JWT ");
+      print("Payload : ${jwt.payload}");
+      print("ID UTILISATEUR : ${jwt.payload["id_utilisateur"]}");
+      print("ID ENTREPRISE : ${jwt.payload["id_entreprise"]}");
+
+      // token avec notre cle
+      final secret = env["JWT_SECRET"];
+
+      if (secret == null || secret.isEmpty) {
+        throw Exception("JWT_SECRET est vide ou null");
+      }
+
+      final token = jwt.sign(SecretKey(secret));
+
       return Response.ok(
-        jsonEncode({"success": true, "data": utilisateur}),
+        jsonEncode({"success": true, "data": dat, "token": token}),
 
         headers: {"Content-Type": "application/json"},
       );
-    } catch (e) {
-      return Response(
-        500,
+    } catch (e, stack) {
+      print("Erreur login");
+      print("Erreur login utilisateur : $e");
+      print(stack);
 
-        body: jsonEncode({"success": false, "message": e.toString()}),
-
+      return Response.internalServerError(
+        body: e.toString(),
         headers: {"Content-Type": "application/json"},
       );
     }

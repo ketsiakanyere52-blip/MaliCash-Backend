@@ -30,6 +30,7 @@ class SortieService {
     int idCaisse,
     String libelle,
     double montant,
+    int idutilisateur,
   ) async {
     final conn = Database().pool;
 
@@ -41,11 +42,17 @@ class SortieService {
           INSERT INTO sortie(
             id_caisse,
             libelle,
-            montant
+            montant,
+            id_utilisateur
           )
-          VALUES(:idCaisse, :libelle, :montant)
+          VALUES(:idCaisse, :libelle, :montant, :id_utilisateur)
           """,
-          {'idCaisse': idCaisse, 'libelle': libelle, 'montant': montant},
+          {
+            'idCaisse': idCaisse,
+            'libelle': libelle,
+            'montant': montant,
+            'id_utilisateur': idutilisateur,
+          },
         );
 
         // Enregistrer le mouvement de caisse

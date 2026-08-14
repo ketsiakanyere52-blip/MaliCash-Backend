@@ -61,19 +61,51 @@ class MouvementCaisseService {
     try {
       final result = await conn.execute(
         """
-        SELECT
-            id_mouvement,
-            type_mouvement,
-            libelle,
-            montant,
-            date_mouvement
-        FROM mouvement_caisse
-        WHERE id_caisse = :idCaisse
-        ORDER BY date_mouvement DESC
-        """,
+  SELECT
+      m.id_mouvement,
+      m.type_mouvement,
+      m.libelle,
+      m.montant,
+      m.date_mouvement,
+
+      CASE
+        WHEN m.type_mouvement = 'ENTREE'
+          THEN CONCAT(eu.nom, ' (ID: ', eu.id_utilisateur, ')')
+
+        WHEN m.type_mouvement = 'SORTIE'
+          THEN CONCAT(su.nom, ' (ID: ', su.id_utilisateur, ')')
+
+        ELSE 'Inconnu'
+      END AS utilisateur
+
+  FROM mouvement_caisse m
+
+  LEFT JOIN entree e
+    ON m.type_mouvement = 'ENTREE'
+    AND m.id_caisse = e.id_caisse
+    AND m.libelle = e.libelle
+    AND m.montant = e.montant
+    AND ABS(TIMESTAMPDIFF(SECOND, m.date_mouvement, e.date_entree)) <= 2
+
+  LEFT JOIN utilisateurs eu
+    ON e.id_utilisateur = eu.id_utilisateur
+
+  LEFT JOIN sortie s
+    ON m.type_mouvement = 'SORTIE'
+    AND m.id_caisse = s.id_caisse
+    AND m.libelle = s.libelle
+    AND m.montant = s.montant
+    AND ABS(TIMESTAMPDIFF(SECOND, m.date_mouvement, s.date_sortie)) <= 2
+
+  LEFT JOIN utilisateurs su
+    ON s.id_utilisateur = su.id_utilisateur
+
+  WHERE m.id_caisse = :idCaisse
+
+  ORDER BY m.date_mouvement DESC
+  """,
         {'idCaisse': idCaisse},
       );
-
       return result.rows.map((e) => e.assoc()).toList();
     } catch (e) {
       print("Erreur historique : $e");

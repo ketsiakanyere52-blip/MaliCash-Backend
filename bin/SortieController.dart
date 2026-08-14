@@ -11,13 +11,24 @@ class SortieController {
       final body = await request.readAsString();
 
       final data = jsonDecode(body);
+      final utilisateur = request.context["id_utilisateur"];
 
+      if (utilisateur == null) {
+        return Response(
+          401,
+          body: jsonEncode({
+            "success": false,
+            "message": "utilisateur non authentifie",
+          }),
+        );
+      }
       await SortieService.createSortie(
         int.parse(data["id_caisse"].toString()),
 
         data["libelle"],
 
         double.parse(data["montant"].toString()),
+        int.parse(utilisateur.toString()),
       );
 
       return Response.ok(

@@ -12,10 +12,24 @@ class EntreeController {
 
       final data = jsonDecode(body);
 
+      final utilisateur = request.context["id_utilisateur"];
+
+      if (utilisateur == null) {
+        return Response(
+          401,
+          body: jsonEncode({
+            "success": false,
+            "message": "Utilisateur non authantifie",
+          }),
+          headers: {"Content-Type": "application"},
+        );
+      }
+
       await EntreeService.createEntree(
         int.parse(data["id_caisse"].toString()),
         data["libelle"],
         double.parse(data["montant"].toString()),
+        int.parse(utilisateur.toString()),
       );
 
       return Response.ok(

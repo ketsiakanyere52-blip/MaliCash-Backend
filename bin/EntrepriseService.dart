@@ -57,12 +57,14 @@ class Entreprise {
         """
   SELECT id_entreprise
   FROM entreprise
-  WHERE email = ?
+  WHERE email = :email
   """,
         {'email': email.trim().toLowerCase()},
       );
-
-      if (existe.isNotEmpty) {
+      print("Email recu : ${email.trim().toLowerCase()}");
+      print("Nombre d'email: ${email.length}");
+      print("Resulta: ${existe.rows.map((r) => r.assoc()).toList()}");
+      if (existe.rows.isNotEmpty) {
         throw Exception("Cet email est déjà utilisé.");
       }
 
@@ -94,6 +96,33 @@ class Entreprise {
 
       // Récupérer l'id créé
       final idEntreprise = result.lastInsertID.toInt();
+
+      // inserer admin dans dans la table utilisateur
+      await conn.execute(
+        """
+      insert into utilisateurs
+      (
+      id_entreprise,nom,postnom,email,password,telephone,est_admin
+      )values(
+      :idEntreprise,
+      :nom,
+      :postnom,
+      :email,
+      :password,
+      :telephone,
+      :estAdmin
+      )
+""",
+        {
+          'idEntreprise': idEntreprise,
+          'nom': 'Admin',
+          'postnom': 'Admin',
+          'email': email.trim().toLowerCase(),
+          'password': hashedPassword,
+          'telephone': telephone,
+          'estAdmin': true,
+        },
+      );
 
       // Récupérer l'entreprise créé
       final entreprise = await conn.execute(
